@@ -64,7 +64,7 @@ def discover(question: str, intent: str, limit: int=8) -> list[dict]:
                 for item in response.json().get("results",[]):
                     url=item.get("url","")
                     if url.startswith("https://") and _trusted(url) and url not in seen:
-                        seen.add(url);results.append({"title":item.get("title") or _host(url),"url":url,"domain":_host(url)})
+                        seen.add(url);results.append({"title":item.get("title") or _host(url),"url":url,"domain":_host(url),"excerpt":(item.get("content") or "")[:3500]})
             except (requests.RequestException,ValueError):pass
     for lead in _curated_leads(question,intent):
         if lead["url"] not in seen:
@@ -73,6 +73,9 @@ def discover(question: str, intent: str, limit: int=8) -> list[dict]:
 def fetch_evidence(sources: list[dict], max_chars: int=3500) -> list[dict]:
     evidence=[]
     for source in sources[:6]:
+        if len(source.get("excerpt","").strip()) >= 120:
+            evidence.append(source)
+            continue
         try:
             response=requests.get(source["url"],headers={"User-Agent":"Mozilla/5.0"},timeout=12)
             response.raise_for_status()
@@ -100,12 +103,7 @@ def investigate(question: str,mode: str="research") -> dict:
         result=_fallback(question,intent,evidence)
         result["leads"]=leads
         return result
-    key=os.getenv("OPENAI_API_KEY","")
-    if not key:
-        try:
-            import streamlit as st
-            key=st.secrets.get("OPENAI_API_KEY","")
-        except Exception:pass
+    key=_secret("OPENAI_API_KEY")
     if not key:
         result=_fallback(question,intent,evidence)
         result["leads"]=leads
