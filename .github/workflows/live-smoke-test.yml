@@ -1,0 +1,30 @@
+name: Live Streamlit smoke test
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: "17 14 * * *"
+permissions:
+  contents: read
+jobs:
+  live-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pytest pandas numpy openpyxl xlrd
+      - name: Test analytics engine
+        run: python -m pytest -q
+      - name: Probe live deployment and generate diagnostic report
+        run: python scripts/check_live.py
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: insightflow-live-diagnostics
+          path: diagnostics/
+          if-no-files-found: warn
