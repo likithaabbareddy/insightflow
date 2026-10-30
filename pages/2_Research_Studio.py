@@ -4,6 +4,7 @@ import plotly.express as px
 from src.research import CATALOG, COUNTRIES, match_topic, infer_countries, fetch_world_bank, describe_trends, forecast_series, discover_indicators, fetch_discovered_indicator
 from src.story_report import narrative, charts, export_pdf, export_docx, export_pptx
 from src.question_guidance import guidance
+from src.agent_ui import show_report
 
 st.set_page_config(page_title="Research Studio | InsightFlow", page_icon="🌐", layout="wide")
 st.markdown("""<style>
@@ -21,7 +22,8 @@ with st.expander("⚙️ Optional research controls", expanded=False):
     default_countries = infer_countries(question) if question else ["USA", "IND", "CHN"]
     countries = st.multiselect("Countries to compare", list(COUNTRIES.values()), default=default_countries)
     st.caption("These controls are optional. You can simply enter a question and press Research.")
-st.caption("Start with a question — no topic dropdown required. We search the connected indicator catalog when needed.")
+st.caption("Ask anything. For open-ended questions, the research agent looks for trustworthy public sources; for recognized indicators, the charting workflow can analyze historical data.")
+show_report(question,"research","research_agent")
 run = st.button("✨ Research my question", type="primary", use_container_width=True)
 @st.cache_data(ttl=21600, show_spinner=False)
 def load(topic, codes): return fetch_world_bank(topic, list(codes))
