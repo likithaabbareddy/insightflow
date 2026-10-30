@@ -1,0 +1,11 @@
+observation_date,city,temperature_c,rainfall_mm
+2025-01-01,Detroit,-2,1
+2025-01-08,Detroit,-4,3
+2025-01-15,Detroit,-1,0
+2025-01-22,Detroit,1,4
+2025-01-29,Detroit,2,2
+2025-02-05,Detroit,0,5
+2025-02-12,Detroit,3,0
+2025-02-19,Detroit,4,1
+2025-02-26,Detroit,6,2
+2025-03-05,Detroit,8,0
