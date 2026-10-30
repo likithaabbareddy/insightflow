@@ -15,8 +15,9 @@ st.markdown('<div class="hero"><h1>💼 Business Intelligence</h1><p>Understand 
 question=st.text_area("What business decision are you exploring?",placeholder="How has unemployment changed in the United States? Or: Which product category generates the most revenue?")
 st.caption("Ask your question first. InsightFlow selects a research route automatically; upload your own data only when you want to analyze private business metrics.")
 show_report(question,"business","business_agent")
-with st.expander("📂 Optional: analyze structured market data or your own dataset"):
-    source=st.radio("Structured data source",["Public market indicators","My business dataset"],horizontal=True)
+st.divider()
+st.subheader("Optional: analyze a dataset")
+source=st.radio("Dataset workflow",["None — just research my question","Public market indicators","My business dataset"],horizontal=True)
 if source=="Public market indicators":
     st.caption("Connected source: World Bank economic and demographic indicators. Other business providers are not connected yet.")
     st.page_link("pages/2_Research_Studio.py",label="Explore broader public research →",icon="🌐")
