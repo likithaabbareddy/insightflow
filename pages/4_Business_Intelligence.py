@@ -16,8 +16,8 @@ question=st.text_area("What business decision are you exploring?",placeholder="H
 st.caption("Ask your question first. InsightFlow selects a research route automatically; upload your own data only when you want to analyze private business metrics.")
 show_report(question,"business","business_agent")
 st.divider()
-st.subheader("Optional: analyze a dataset")
-source=st.radio("Dataset workflow",["None — just research my question","Public market indicators","My business dataset"],horizontal=True)
+with st.expander("📂 Advanced: analyze a dataset or statistical indicator",expanded=False):
+    source=st.radio("Data workflow",["Research only","Public market indicators","My business dataset"],horizontal=True)
 if source=="Public market indicators":
     st.caption("Connected source: World Bank economic and demographic indicators. Other business providers are not connected yet.")
     st.page_link("pages/2_Research_Studio.py",label="Explore broader public research →",icon="🌐")
@@ -57,7 +57,7 @@ if source=="Public market indicators":
         a.download_button("📕 PDF",export_pdf(plan["topic"],paragraphs,pictures,meta,methods),file_name="market-research.pdf",mime="application/pdf")
         b.download_button("📘 Word",export_docx(plan["topic"],paragraphs,pictures,meta,methods),file_name="market-research.docx",mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
         c.download_button("📽️ PowerPoint",export_pptx(plan["topic"],paragraphs,pictures,meta,methods),file_name="market-research.pptx",mime="application/vnd.openxmlformats-officedocument.presentationml.presentation")
-else:
+elif source=="My business dataset":
     st.info("Upload only non-sensitive, appropriately shared business data. This prototype does not provide enterprise-grade access controls.")
     upload=st.file_uploader("Upload business CSV or Excel",type=["csv","xlsx","xls"])
     if upload:
