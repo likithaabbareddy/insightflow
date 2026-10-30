@@ -84,7 +84,8 @@ st.plotly_chart(px.line(frame, x="Year", y="Value", color="Country", markers=Fal
                         title=f"{topic} — historical trajectories", labels={"Value":unit},
                         template="plotly_dark"), use_container_width=True)
 st.subheader("02 / What changed?")
-st.markdown("### The story behind the curve")\nst.write("Each line traces observed change over time. Compare the beginning and end of the period, then look for turning points, sustained rises or declines, and differences between countries. A visual relationship does not establish a cause.")
+st.markdown("### The story behind the curve")
+st.write("Each line traces observed change over time. Compare the beginning and end of the period, then look for turning points, sustained rises or declines, and differences between countries. A visual relationship does not establish a cause.")
 for s in stories:
     change = f"{s['pct']:+.1f}%" if s["pct"] is not None else "not measurable as a percentage"
     st.markdown(f"**{s['country']}** moved from **{s['first']:,.2f}** in {s['start_year']} to **{s['last']:,.2f}** in {s['end_year']} ({change}). This is an observed change, not evidence of causation.")
