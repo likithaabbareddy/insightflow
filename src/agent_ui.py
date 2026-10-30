@@ -2,6 +2,9 @@
 import streamlit as st
 from src.web_agent import investigate
 from src.service_health import show_health
+from src.free_analysis import public_indicator
+import pandas as pd
+import plotly.express as px
 from src.exports import pdf_bytes,docx_bytes,pptx_bytes
 
 @st.cache_data(ttl=3600,show_spinner=False)
@@ -46,6 +49,17 @@ def show_report(question: str,mode: str,key: str):
         st.write("These are relevant official websites, not verified answers to the question.")
         for lead in report["leads"]:
             st.markdown("- [" + lead["title"] + "](" + lead["url"] + ")")
+    chart=public_indicator(question)
+    if chart:
+        st.subheader("📈 Verified public-data trend")
+        st.caption(chart["title"]+" · "+chart["unit"])
+        df=pd.DataFrame(chart["rows"])
+        fig=px.line(df,x="Year",y="Value",markers=True,labels={"Value":chart["unit"]},title=chart["title"])
+        st.plotly_chart(fig,use_container_width=True)
+        first,last=df.iloc[0],df.iloc[-1]
+        st.write(f"From {int(first['Year'])} to {int(last['Year'])}, the reported indicator changed from {first['Value']:,.1f} to {last['Value']:,.1f} {chart['unit']}.")
+        st.caption(chart["note"])
+        st.markdown("[World Bank indicator source]("+chart["source"]+")")
     st.info(report["limitations"])
     if not report["findings"]:
         st.warning("No supported answer was generated. Try a narrower question or check again when more sources are available.")
