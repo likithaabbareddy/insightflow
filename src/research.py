@@ -88,3 +88,54 @@ def forecast_series(frame: pd.DataFrame, horizon: int = 5) -> pd.DataFrame:
             rows.append({"Country": country, "Year": int(years[-1]+step), "Value": float(estimate),
                          "Method": method, "Holdout MAE": min(naive_mae, drift_mae)})
     return pd.DataFrame(rows)
+
+def discover_indicators(question: str, limit: int = 8) -> list[dict]:
+    """Search live World Bank indicator metadata, ranking matches by query tokens.
+
+    Discovery is broader than the curated catalog but does not claim web-wide coverage.
+    """
+    import requests
+    import re
+    stop = {"what","which","when","where","why","how","have","has","had","the","and","for","with",
+            "over","last","years","year","trend","trends","compare","comparison","show","me",
+            "in","of","to","is","are","data","about","change","changed","between","from","will"}
+    terms = [t for t in re.findall(r"[a-z]{3,}", question.lower()) if t not in stop]
+    if not terms: return []
+    response = requests.get("https://api.worldbank.org/v2/indicator", params={"format":"json","per_page":20000}, timeout=35)
+    response.raise_for_status()
+    payload = response.json()
+    if not isinstance(payload, list) or len(payload)<2 or not payload[1]: return []
+    ranked = []
+    for item in payload[1]:
+        name = str(item.get("name") or "")
+        code = str(item.get("id") or "")
+        source = str((item.get("source") or {}).get("value") or "")
+        if not code or not name or not source: continue
+        name_words = set(re.findall(r"[a-z]{3,}", name.lower()))
+        score = sum(3 if t in name_words else 1 if t in name.lower() else 0 for t in terms)
+        if score >= max(2, len(terms)//2):
+            ranked.append((score, {"name":name,"indicator":code,"source":source}))
+    ranked.sort(key=lambda pair: (-pair[0],len(pair[1]["name"])))
+    return [item for _,item in ranked[:limit]]
+
+def fetch_discovered_indicator(indicator: str, countries: list[str]) -> tuple[pd.DataFrame, dict]:
+    """Retrieve an explicitly discovered World Bank indicator, preserving provenance."""
+    import requests
+    if not re.fullmatch(r"[A-Za-z0-9_.]+", indicator): raise ValueError("Invalid indicator code")
+    if not countries or any(c not in set(COUNTRIES.values()) for c in countries): raise ValueError("Unsupported country")
+    url = f"https://api.worldbank.org/v2/country/{';'.join(countries)}/indicator/{indicator}"
+    response = requests.get(url, params={"format":"json","per_page":20000}, timeout=25)
+    response.raise_for_status()
+    payload = response.json()
+    if not isinstance(payload,list) or len(payload)<2 or not payload[1]: raise ValueError("No data for this indicator and country selection")
+    rows=[]
+    for record in payload[1]:
+        try:
+            if record["value"] is not None:
+                rows.append({"Year":int(record["date"]),"Country":record["country"]["value"],"Value":float(record["value"])})
+        except (ValueError,TypeError,KeyError): continue
+    frame=pd.DataFrame(rows)
+    if frame.empty: raise ValueError("No numeric observations available")
+    return frame.sort_values(["Country","Year"]), {"provider":"World Bank","url":url,"indicator":indicator,
+       "unit":"indicator units (see source metadata)","retrieved_at":pd.Timestamp.now(tz="UTC").isoformat(),
+       "observations":len(frame),"countries":sorted(frame["Country"].unique().tolist())}
