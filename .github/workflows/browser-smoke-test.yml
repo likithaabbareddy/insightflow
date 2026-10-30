@@ -1,0 +1,27 @@
+name: Browser UI smoke test
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pytest playwright
+      - run: python -m playwright install --with-deps chromium
+      - name: Inspect deployed app with Chromium
+        run: python scripts/browser_smoke.py
+      - name: Save browser screenshots and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: insightflow-browser-report
+          path: diagnostics/
+          if-no-files-found: warn
