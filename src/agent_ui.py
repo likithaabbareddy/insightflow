@@ -27,9 +27,17 @@ def show_report(question: str,mode: str,key: str):
             st.markdown("### "+finding["heading"])
             st.write(finding["text"])
             st.markdown("**Evidence:** "+", ".join(f"[Source {i+1}]({url})" for i,url in enumerate(finding.get("sources") or [finding["source"]])))
+    if report.get("leads"):
+        st.markdown("### Official starting points")
+        st.write("These are relevant official websites, not verified answers to the question.")
+        for lead in report["leads"]:
+            st.markdown("- [" + lead["title"] + "](" + lead["url"] + ")")
     st.info(report["limitations"])
     if not report["findings"]:
         st.warning("No supported answer was generated. Try a narrower question or check again when more sources are available.")
+    if not report["findings"]:
+        st.caption("Report downloads will appear when there is enough retrieved evidence to produce a substantive report.")
+        return
     lines=[report["title"],"Question: "+question,"",report["summary"],""]
     for f in report["findings"]:
         lines.extend([f["heading"],f["text"],"Source: "+f["source"],""])
