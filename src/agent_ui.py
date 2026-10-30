@@ -1,6 +1,7 @@
 """Shared research report renderer for both user experiences."""
 import streamlit as st
 from src.web_agent import investigate
+from src.service_health import show_health
 from src.exports import pdf_bytes,docx_bytes,pptx_bytes
 
 @st.cache_data(ttl=3600,show_spinner=False)
@@ -15,8 +16,20 @@ def show_report(question: str,mode: str,key: str):
                 with st.spinner("Discovering sources, reading evidence and preparing your answer…"):
                     st.session_state[key+"_report"]=(question,run_investigation(question,mode))
             except Exception as exc:
-                st.error("Research retrieval is temporarily unavailable. Please try again.")
-                st.caption("No unsupported findings were generated.")
+                import logging
+                logging.exception("InsightFlow investigation failed")
+                name=type(exc).__name__
+                if name=="AuthenticationError":
+                    detail="OpenAI authentication failed. Check your API key."
+                elif name=="RateLimitError":
+                    detail="API quota or rate limit reached. Check billing and usage."
+                elif name=="NotFoundError":
+                    detail="The configured AI model is unavailable."
+                else:
+                    detail="Research failed during retrieval or synthesis. Check diagnostics below."
+                st.error(detail)
+                st.caption("Error category: "+name+" (credentials are not displayed).")
+    show_health()
     saved=st.session_state.get(key+"_report")
     if not saved or saved[0]!=question:return
     report=saved[1]
