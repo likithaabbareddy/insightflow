@@ -17,14 +17,14 @@ h1,h2,h3{letter-spacing:-.035em}
 st.markdown('<div class="hero"><h1>🌐 Research Studio</h1><p>Ask a question. Explore trusted public data. Discover the story behind the numbers.</p></div>', unsafe_allow_html=True)
 question = st.text_input("What do you want to understand?", placeholder="How has life expectancy changed in India and the United States over 40 years?")
 suggested = match_topic(question)
-with st.expander("⚙️ Optional research controls", expanded=False):
+with st.expander("📊 Optional: historical statistical analysis", expanded=False):
     years = st.slider("Years of history", 10, 60, 40, step=5)
     default_countries = infer_countries(question) if question else ["USA", "IND", "CHN"]
     countries = st.multiselect("Countries to compare", list(COUNTRIES.values()), default=default_countries)
     st.caption("These controls are optional. You can simply enter a question and press Research.")
 st.caption("Ask anything. For open-ended questions, the research agent looks for trustworthy public sources; for recognized indicators, the charting workflow can analyze historical data.")
 show_report(question,"research","research_agent")
-run = st.button("✨ Research my question", type="primary", use_container_width=True)
+run = st.button("📊 Build historical charts (supported indicators only)", use_container_width=True, disabled=not bool(suggested))
 @st.cache_data(ttl=21600, show_spinner=False)
 def load(topic, codes): return fetch_world_bank(topic, list(codes))
 @st.cache_data(ttl=21600, show_spinner=False)
@@ -45,17 +45,6 @@ if run:
                 frame, provenance = load(suggested, tuple(countries))
             st.session_state["research_result"] = (suggested, question, frame, provenance, years)
         except Exception as exc: st.error(f"Data collection failed: {exc}")
-    else:
-        st.session_state["research_guide"] = (question, guidance(question))
-if "research_guide" in st.session_state and "research_result" not in st.session_state:
-    asked, guide = st.session_state["research_guide"]
-    if asked == question:
-        st.subheader(guide["title"])
-        st.write(guide["intro"])
-        for heading, body in guide["sections"]:
-            st.markdown("#### " + heading)
-            st.write(body)
-        st.warning(guide["limitations"])
 if "research_result" not in st.session_state:
     st.info("Ask any question to search our connected World Bank indicator catalog. Coverage is broader than the five curated topics, but not yet the entire internet.")
     st.stop()
