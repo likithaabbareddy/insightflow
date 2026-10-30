@@ -1,0 +1,11 @@
+sale_date,region,product,revenue,units
+2025-01-01,East,Tea,120,12
+2025-01-08,West,Coffee,230,23
+2025-01-15,East,Coffee,180,18
+2025-01-22,West,Tea,160,16
+2025-01-29,East,Tea,140,14
+2025-02-05,West,Coffee,280,28
+2025-02-12,East,Coffee,210,21
+2025-02-19,West,Tea,190,19
+2025-02-26,East,Tea,150,15
+2025-03-05,West,Coffee,300,30
