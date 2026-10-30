@@ -83,7 +83,8 @@ c.metric("Observations", f"{len(frame):,}")
 st.plotly_chart(px.line(frame, x="Year", y="Value", color="Country", markers=False,
                         title=f"{topic} — historical trajectories", labels={"Value":unit},
                         template="plotly_dark"), use_container_width=True)
-st.subheader("02 / What changed?")\nst.markdown("### The story behind the curve")\nst.write("Each line traces observed change over time. Compare the beginning and end of the period, then look for turning points, sustained rises or declines, and differences between countries. A visual relationship does not establish a cause.")
+st.subheader("02 / What changed?")
+st.markdown("### The story behind the curve")\nst.write("Each line traces observed change over time. Compare the beginning and end of the period, then look for turning points, sustained rises or declines, and differences between countries. A visual relationship does not establish a cause.")
 for s in stories:
     change = f"{s['pct']:+.1f}%" if s["pct"] is not None else "not measurable as a percentage"
     st.markdown(f"**{s['country']}** moved from **{s['first']:,.2f}** in {s['start_year']} to **{s['last']:,.2f}** in {s['end_year']} ({change}). This is an observed change, not evidence of causation.")
@@ -109,7 +110,8 @@ methods = ("Descriptive comparisons use observed World Bank indicator values. Fo
            "Missing years are not imputed; no causal claims are made.")
 st.markdown(f"**Source:** [World Bank Indicators API]({provenance['url']}) · **Method:** {methods}")
 lines = report_lines(f"{topic}: an evidence-based research story", question or topic, stories, provenance, methods)
-chart = chart_png(frame, f"{topic}: observed history", unit)\nc1,c2,c3 = st.columns(3)
+chart = chart_png(frame, f"{topic}: observed history", unit)
+c1,c2,c3 = st.columns(3)
 c1.download_button("📕 Download PDF", pdf_with_chart(lines, chart), file_name="insightflow-research.pdf", mime="application/pdf", use_container_width=True)
 c2.download_button("📘 Download Word", docx_with_chart(lines, chart), file_name="insightflow-research.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
 c3.download_button("📽️ Download PowerPoint", pptx_with_chart(lines, chart), file_name="insightflow-research.pptx", mime="application/vnd.openxmlformats-officedocument.presentationml.presentation", use_container_width=True)
