@@ -1,0 +1,1 @@
+# InsightFlow generic analytics package
