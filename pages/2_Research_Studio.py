@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 from src.research import CATALOG, COUNTRIES, match_topic, infer_countries, fetch_world_bank, describe_trends, forecast_series, discover_indicators, fetch_discovered_indicator
 from src.story_report import narrative, charts, export_pdf, export_docx, export_pptx
+from src.question_guidance import guidance
 
 st.set_page_config(page_title="Research Studio | InsightFlow", page_icon="🌐", layout="wide")
 st.markdown("""<style>
@@ -31,6 +32,7 @@ def load_discovered(code, codes): return fetch_discovered_indicator(code, list(c
 if run:
     st.session_state.pop("research_result", None)
     st.session_state.pop("research_candidates", None)
+    st.session_state.pop("research_guide", None)
     if not question.strip():
         st.info("Enter a research question to begin.")
     elif not countries:
@@ -42,29 +44,16 @@ if run:
             st.session_state["research_result"] = (suggested, question, frame, provenance, years)
         except Exception as exc: st.error(f"Data collection failed: {exc}")
     else:
-        try:
-            with st.spinner("Searching public indicator metadata for your question…"):
-                candidates = find_indicators(question)
-            if candidates:
-                st.session_state["research_candidates"] = (question, candidates, countries, years)
-            else:
-                st.info("No credible matching World Bank indicator was found. This topic needs another data provider; InsightFlow won't silently substitute an unrelated dataset.")
-        except Exception as exc: st.error(f"Indicator discovery is temporarily unavailable: {exc}")
-if "research_candidates" in st.session_state:
-    q, candidates, codes, span = st.session_state["research_candidates"]
-    st.subheader("Data sources found for your question")
-    st.write("Choose a relevant indicator **only if one matches your intent**. You can also change your question; we will not force an unrelated topic.")
-    options = ["— No match; do not use these —"] + [f"{item['name']} · {item['source']} ({item['indicator']})" for item in candidates]
-    selected = st.selectbox("Potential indicators", options)
-    if selected != options[0] and st.button("Analyze this verified indicator", type="primary"):
-        candidate = candidates[options.index(selected)-1]
-        try:
-            with st.spinner("Downloading indicator history…"):
-                frame, provenance = load_discovered(candidate["indicator"], tuple(codes))
-            st.session_state["research_result"] = (candidate["name"], q, frame, provenance, span)
-            st.session_state.pop("research_candidates", None)
-            st.rerun()
-        except Exception as exc: st.error(f"Unable to retrieve this indicator: {exc}")
+        st.session_state["research_guide"] = (question, guidance(question))
+if "research_guide" in st.session_state and "research_result" not in st.session_state:
+    asked, guide = st.session_state["research_guide"]
+    if asked == question:
+        st.subheader(guide["title"])
+        st.write(guide["intro"])
+        for heading, body in guide["sections"]:
+            st.markdown("#### " + heading)
+            st.write(body)
+        st.warning(guide["limitations"])
 if "research_result" not in st.session_state:
     st.info("Ask any question to search our connected World Bank indicator catalog. Coverage is broader than the five curated topics, but not yet the entire internet.")
     st.stop()
