@@ -22,7 +22,16 @@ if source=="Public market indicators":
             plan=plan_question(question,"business")
             st.session_state["business_plan"]=plan
             if not plan["topic"]:
-                st.warning("No directly supported public indicator matches this question. Use Research Studio to discover candidate indicators, or supply your own data. No unrelated dataset will be substituted.")
+                st.info("This question calls for a business feasibility study, not just one economic indicator. Here is a useful starting roadmap.")
+                st.markdown("### Your business research roadmap")
+                st.write(f"**Your question:** {question}")
+                st.markdown("**1. Market demand:** Identify customer segments, local competitors, event types and seasonal demand.")
+                st.markdown("**2. Business model:** Compare weddings, corporate events and private celebrations. Choose a niche and service scope.")
+                st.markdown("**3. Unit economics:** Estimate revenue per event, vendor and venue costs, staffing, marketing and working capital.")
+                st.markdown("**4. Local requirements:** Verify registration, taxes, contracts, insurance and applicable permits using authoritative local sources.")
+                st.markdown("**5. Validation:** Interview customers, request supplier quotes and test a pilot before projecting demand.")
+                st.caption("This is a research plan, not a completed market study. No unsupported market figures or regulatory claims are presented.")
+                st.page_link("pages/2_Research_Studio.py",label="Explore related public indicators →")
             else:
                 try:
                     with st.spinner("Collecting trusted market indicators…"):
@@ -78,6 +87,6 @@ else:
                     st.download_button("Download analyzed data (CSV)",df.to_csv(index=False),file_name="business-analysis.csv",mime="text/csv")
                     st.caption("Business dataset reporting is currently descriptive; multi-chart PDF/Word/PowerPoint exports for uploaded data are a future enhancement.")
         except Exception as exc:st.error(f"Unable to analyze dataset: {exc}")
-with st.expander("How this analysis works"):
-    st.write("The current system uses deterministic planning and calculations. It does not yet use an autonomous LLM, private account connectors, or unverified web scraping.")
-    if "business_plan" in st.session_state:st.json(st.session_state["business_plan"])
+with st.expander("About the evidence"):
+    st.write("Public market analysis uses available World Bank indicators. Uploaded business data is analyzed in the app session. Broader feasibility questions currently receive a structured research roadmap, not invented market statistics.")
+    st.caption("Autonomous multi-source web research and LLM investigation are planned, not yet available.")
