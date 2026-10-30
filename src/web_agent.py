@@ -94,7 +94,7 @@ def _fallback(question: str, intent: str, evidence: list[dict]) -> dict:
                       if evidence else "No independently retrievable trusted sources were found in this attempt. I cannot substantiate an answer from live evidence."),
             "findings":[{"heading":e["title"],"text":e["excerpt"][:450],"source":e["url"]} for e in evidence],
             "limitations":"Source excerpts are evidence previews, not verified conclusions. Check publication dates, context and applicability."}
-def investigate(question: str,mode: str="research") -> dict:
+def investigate(question: str,mode: str="research", ai_mode: str="auto") -> dict:
     if not question.strip():raise ValueError("Please enter a question.")
     intent=classify(question,mode)
     leads=discover(question,intent)
@@ -104,7 +104,7 @@ def investigate(question: str,mode: str="research") -> dict:
         result["leads"]=leads
         return result
     key=_secret("OPENAI_API_KEY")
-    provider=_secret("INSIGHTFLOW_AI_MODE").lower() or "auto"
+    provider=ai_mode.lower() if ai_mode in ("free","auto","openai") else "auto"
     if provider=="free":key=""
     if not key:
         result=_fallback(question,intent,evidence)
