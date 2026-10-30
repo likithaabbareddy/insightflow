@@ -23,27 +23,53 @@ def _host(url: str) -> str:
 def _trusted(url: str) -> bool:
     host=_host(url)
     return any(host==d or host.endswith("."+d) for d in TRUSTED_DOMAINS)
+def _secret(name: str) -> str:
+    value=os.getenv(name,"")
+    if value:return value
+    try:
+        import streamlit as st
+        return str(st.secrets.get(name,""))
+    except Exception:return ""
+
+def _curated_leads(question: str, intent: str) -> list[dict]:
+    q=question.lower()
+    if intent=="relocation and career" and "iceland" in q:
+        links=[
+          ("Iceland official government services","https://island.is/en"),
+          ("Work in Iceland — official career and relocation information","https://work.iceland.is/"),
+          ("Statistics Iceland — official data","https://www.statice.is/"),
+          ("OECD — Iceland country data","https://www.oecd.org/en/countries/iceland.html")]
+    elif intent=="business feasibility" and "india" in q:
+        links=[
+          ("Startup India — government startup portal","https://www.startupindia.gov.in/"),
+          ("Ministry of Corporate Affairs — business registration","https://www.mca.gov.in/"),
+          ("GST portal — tax information","https://www.gst.gov.in/"),
+          ("Invest India — investment and industry resources","https://www.investindia.gov.in/")]
+    else:return []
+    return [{"title":title,"url":url,"domain":_host(url)} for title,url in links]
+
 def discover(question: str, intent: str, limit: int=8) -> list[dict]:
-    """Search public indexed sources. Search results are leads, not verified facts."""
+    """Prefer a supported search API; supplement with relevant official portals.
+    Search leads alone are not evidence of any specific factual claim.
+    """
     results=[];seen=set()
-    for term in search_terms(question,intent):
-        try:
-            response=requests.get("https://www.google.com/search",params={"q":term,"num":8},
-                 headers={"User-Agent":"Mozilla/5.0 (compatible; InsightFlow/1.0)"},timeout=12)
-            response.raise_for_status()
-            soup=BeautifulSoup(response.text,"html.parser")
-            for anchor in soup.select("a:has(h3)"):
-                title=anchor.get_text(" ",strip=True)[:180]
-                href=anchor.get("href","")
-                if href.startswith("/url?"):
-                    from urllib.parse import parse_qs
-                    href=parse_qs(urlparse(href).query).get("q",[""])[0]
-                if not href.startswith("https://") or not _trusted(href) or href in seen:continue
-                seen.add(href);results.append({"title":title,"url":href,"domain":_host(href)})
-                if len(results)>=limit:return results
-        except requests.RequestException:
-            continue
-    return results
+    key=_secret("TAVILY_API_KEY")
+    if key:
+        for term in search_terms(question,intent)[:2]:
+            try:
+                response=requests.post("https://api.tavily.com/search",
+                    json={"api_key":key,"query":term,"search_depth":"basic","max_results":8},
+                    timeout=16)
+                response.raise_for_status()
+                for item in response.json().get("results",[]):
+                    url=item.get("url","")
+                    if url.startswith("https://") and _trusted(url) and url not in seen:
+                        seen.add(url);results.append({"title":item.get("title") or _host(url),"url":url,"domain":_host(url)})
+            except (requests.RequestException,ValueError):pass
+    for lead in _curated_leads(question,intent):
+        if lead["url"] not in seen:
+            seen.add(lead["url"]);results.append(lead)
+    return results[:limit]
 def fetch_evidence(sources: list[dict], max_chars: int=3500) -> list[dict]:
     evidence=[]
     for source in sources[:6]:
@@ -70,14 +96,20 @@ def investigate(question: str,mode: str="research") -> dict:
     intent=classify(question,mode)
     leads=discover(question,intent)
     evidence=fetch_evidence(leads)
-    if not evidence:return _fallback(question,intent,evidence)
+    if not evidence:
+        result=_fallback(question,intent,evidence)
+        result["leads"]=leads
+        return result
     key=os.getenv("OPENAI_API_KEY","")
     if not key:
         try:
             import streamlit as st
             key=st.secrets.get("OPENAI_API_KEY","")
         except Exception:pass
-    if not key:return _fallback(question,intent,evidence)
+    if not key:
+        result=_fallback(question,intent,evidence)
+        result["leads"]=leads
+        return result
     from openai import OpenAI
     from pydantic import BaseModel
     class Finding(BaseModel):
