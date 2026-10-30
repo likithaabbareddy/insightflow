@@ -5,6 +5,7 @@ from src.engine import read_dataset
 from src.agent_core import plan_question, audit_frame, business_insights
 from src.research import match_topic, fetch_world_bank, describe_trends, forecast_series
 from src.story_report import narrative, charts, export_pdf, export_docx, export_pptx
+from src.agent_ui import show_report
 
 st.set_page_config(page_title="InsightFlow | Business Intelligence",page_icon="💼",layout="wide")
 st.markdown("""<style>.block-container{max-width:1200px;padding-top:2rem}
@@ -12,7 +13,10 @@ st.markdown("""<style>.block-container{max-width:1200px;padding-top:2rem}
 .hero h1{color:white}</style>""",unsafe_allow_html=True)
 st.markdown('<div class="hero"><h1>💼 Business Intelligence</h1><p>Understand your market or analyze your own business performance.</p></div>',unsafe_allow_html=True)
 question=st.text_area("What business decision are you exploring?",placeholder="How has unemployment changed in the United States? Or: Which product category generates the most revenue?")
-source=st.radio("Where should we look for evidence?",["Public market indicators","My business dataset"],horizontal=True)
+st.caption("Ask your question first. InsightFlow selects a research route automatically; upload your own data only when you want to analyze private business metrics.")
+show_report(question,"business","business_agent")
+with st.expander("📂 Optional: analyze structured market data or your own dataset"):
+    source=st.radio("Structured data source",["Public market indicators","My business dataset"],horizontal=True)
 if source=="Public market indicators":
     st.caption("Connected source: World Bank economic and demographic indicators. Other business providers are not connected yet.")
     st.page_link("pages/2_Research_Studio.py",label="Explore broader public research →",icon="🌐")
