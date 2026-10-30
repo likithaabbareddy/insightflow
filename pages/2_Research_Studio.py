@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from src.research import CATALOG, COUNTRIES, match_topic, infer_countries, fetch_world_bank, describe_trends, forecast_series, discover_indicators, fetch_discovered_indicator
-from src.exports import report_lines, pdf_with_chart, docx_with_chart, pptx_with_chart, chart_png
+from src.story_report import narrative, charts, export_pdf, export_docx, export_pptx
 
 st.set_page_config(page_title="Research Studio | InsightFlow", page_icon="🌐", layout="wide")
 st.markdown("""<style>
@@ -109,10 +109,14 @@ methods = ("Descriptive comparisons use observed World Bank indicator values. Fo
            "holdout, selecting lower mean absolute error. These simple baselines are not universal best models. "
            "Missing years are not imputed; no causal claims are made.")
 st.markdown(f"**Source:** [World Bank Indicators API]({provenance['url']}) · **Method:** {methods}")
-lines = report_lines(f"{topic}: an evidence-based research story", question or topic, stories, provenance, methods)
-chart = chart_png(frame, f"{topic}: observed history", unit)
+story = narrative(topic, stories, pred)
+pictures = charts(frame, pred, topic, unit)
+st.markdown("### Your research story")
+for paragraph in story[2:]:
+    st.write(paragraph)
+st.caption("Reports include the historical chart, latest-value comparison, and forecast visualization when available.")
 c1,c2,c3 = st.columns(3)
-c1.download_button("📕 Download PDF", pdf_with_chart(lines, chart), file_name="insightflow-research.pdf", mime="application/pdf", use_container_width=True)
-c2.download_button("📘 Download Word", docx_with_chart(lines, chart), file_name="insightflow-research.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
-c3.download_button("📽️ Download PowerPoint", pptx_with_chart(lines, chart), file_name="insightflow-research.pptx", mime="application/vnd.openxmlformats-officedocument.presentationml.presentation", use_container_width=True)
+c1.download_button("📕 Download illustrated PDF", export_pdf(topic, story, pictures, provenance, methods), file_name="insightflow-research.pdf", mime="application/pdf", use_container_width=True)
+c2.download_button("📘 Download illustrated Word", export_docx(topic, story, pictures, provenance, methods), file_name="insightflow-research.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
+c3.download_button("📽️ Download illustrated PowerPoint", export_pptx(topic, story, pictures, provenance, methods), file_name="insightflow-research.pptx", mime="application/vnd.openxmlformats-officedocument.presentationml.presentation", use_container_width=True)
 st.download_button("⬇️ Download source observations (CSV)", frame.to_csv(index=False), file_name="insightflow-source-data.csv", mime="text/csv")
