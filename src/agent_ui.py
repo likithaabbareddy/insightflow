@@ -6,7 +6,7 @@ from src.exports import pdf_bytes,docx_bytes,pptx_bytes
 
 @st.cache_data(ttl=3600,show_spinner=False)
 def run_investigation(question,mode,ai_mode):
-    return investigate(question,mode)
+    return investigate(question,mode,ai_mode)
 
 def show_report(question: str,mode: str,key: str):
     ai_mode=st.radio("Research mode",["Free — source evidence","Automatic — use OpenAI when available"],horizontal=True,key=key+"_mode",help="Free mode uses Tavily search and source excerpts without calling OpenAI. Automatic mode uses OpenAI when available and falls back to excerpts if quota is exhausted.")
@@ -15,15 +15,7 @@ def show_report(question: str,mode: str,key: str):
         else:
             try:
                 with st.spinner("Discovering sources, reading evidence and preparing your answer…"):
-                    import os
-                    from src import web_agent
-                    original=web_agent._secret
-                    if ai_mode.startswith("Free"):
-                        web_agent._secret=lambda name: "free" if name=="INSIGHTFLOW_AI_MODE" else original(name)
-                    try:
-                        st.session_state[key+"_report"]=(question,run_investigation(question,mode,ai_mode))
-                    finally:
-                        web_agent._secret=original
+                    st.session_state[key+"_report"]=(question,run_investigation(question,mode,"free" if ai_mode.startswith("Free") else "auto"))
             except Exception as exc:
                 import logging
                 logging.exception("InsightFlow investigation failed")
