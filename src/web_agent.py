@@ -89,10 +89,11 @@ def fetch_evidence(sources: list[dict], max_chars: int=3500) -> list[dict]:
         except requests.RequestException:continue
     return evidence
 def _fallback(question: str, intent: str, evidence: list[dict]) -> dict:
+    from src.free_analysis import summarize
+    analysis=summarize(question,intent,evidence)
     return {"title":"Research findings: "+question,"intent":intent,
-            "summary":("I located relevant public sources. Review the evidence below; automated synthesis is unavailable until an AI provider is configured."
-                      if evidence else "No independently retrievable trusted sources were found in this attempt. I cannot substantiate an answer from live evidence."),
-            "findings":[{"heading":e["title"],"text":e["excerpt"][:450],"source":e["url"]} for e in evidence],
+            "summary":analysis["summary"] if evidence else "No independently retrievable trusted sources were found in this attempt.",
+            "findings":analysis["findings"],
             "limitations":"Source excerpts are evidence previews, not verified conclusions. Check publication dates, context and applicability."}
 def investigate(question: str,mode: str="research", ai_mode: str="auto") -> dict:
     if not question.strip():raise ValueError("Please enter a question.")
