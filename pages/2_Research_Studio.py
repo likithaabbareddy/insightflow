@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from src.research import CATALOG, COUNTRIES, match_topic, infer_countries, fetch_world_bank, describe_trends, forecast_series
+from src.research import CATALOG, COUNTRIES, match_topic, infer_countries, fetch_world_bank, describe_trends, forecast_series, discover_indicators, fetch_discovered_indicator
 from src.exports import report_lines, pdf_bytes, docx_bytes, pptx_bytes
 
 st.set_page_config(page_title="Research Studio | InsightFlow", page_icon="🌐", layout="wide")
@@ -15,26 +15,58 @@ h1,h2,h3{letter-spacing:-.035em}
 st.markdown('<div class="hero"><h1>🌐 Research Studio</h1><p>Ask a question. Explore trusted public data. Discover the story behind the numbers.</p></div>', unsafe_allow_html=True)
 question = st.text_input("What do you want to understand?", placeholder="How has life expectancy changed in India and the United States over 40 years?")
 suggested = match_topic(question)
-if question and not suggested:
-    st.warning("This question is outside the current connected sources. Choose a supported topic below; we will not invent data.")
-topic = st.selectbox("Research topic", list(CATALOG), index=list(CATALOG).index(suggested) if suggested else 0)
-default_countries = infer_countries(question) if question else ["USA", "IND", "CHN"]
-countries = st.multiselect("Compare countries", list(COUNTRIES.values()), default=default_countries,
-                           help="ISO country codes; more locations coming soon.")
-years = st.slider("Years of history", 10, 60, 40, step=5)
-run = st.button("✨ Build my research story", type="primary", use_container_width=True)
+with st.expander("⚙️ Optional research controls", expanded=False):
+    years = st.slider("Years of history", 10, 60, 40, step=5)
+    default_countries = infer_countries(question) if question else ["USA", "IND", "CHN"]
+    countries = st.multiselect("Countries to compare", list(COUNTRIES.values()), default=default_countries)
+    st.caption("These controls are optional. You can simply enter a question and press Research.")
+st.caption("Start with a question — no topic dropdown required. We search the connected indicator catalog when needed.")
+run = st.button("✨ Research my question", type="primary", use_container_width=True)
 @st.cache_data(ttl=21600, show_spinner=False)
 def load(topic, codes): return fetch_world_bank(topic, list(codes))
+@st.cache_data(ttl=21600, show_spinner=False)
+def find_indicators(q): return discover_indicators(q)
+@st.cache_data(ttl=21600, show_spinner=False)
+def load_discovered(code, codes): return fetch_discovered_indicator(code, list(codes))
 if run:
-    if not countries: st.error("Select at least one country.")
+    st.session_state.pop("research_result", None)
+    st.session_state.pop("research_candidates", None)
+    if not question.strip():
+        st.info("Enter a research question to begin.")
+    elif not countries:
+        st.error("Choose at least one country in optional controls.")
+    elif suggested:
+        try:
+            with st.spinner("Collecting verified observations…"):
+                frame, provenance = load(suggested, tuple(countries))
+            st.session_state["research_result"] = (suggested, question, frame, provenance, years)
+        except Exception as exc: st.error(f"Data collection failed: {exc}")
     else:
         try:
-            with st.spinner("Collecting and validating data from the World Bank…"):
-                frame, provenance = load(topic, tuple(countries))
-            st.session_state["research_result"] = (topic, question, frame, provenance, years)
-        except Exception as exc: st.error(f"Data collection failed: {exc}")
+            with st.spinner("Searching public indicator metadata for your question…"):
+                candidates = find_indicators(question)
+            if candidates:
+                st.session_state["research_candidates"] = (question, candidates, countries, years)
+            else:
+                st.info("No credible matching World Bank indicator was found. This topic needs another data provider; InsightFlow won't silently substitute an unrelated dataset.")
+        except Exception as exc: st.error(f"Indicator discovery is temporarily unavailable: {exc}")
+if "research_candidates" in st.session_state:
+    q, candidates, codes, span = st.session_state["research_candidates"]
+    st.subheader("Data sources found for your question")
+    st.write("Choose a relevant indicator **only if one matches your intent**. You can also change your question; we will not force an unrelated topic.")
+    options = ["— No match; do not use these —"] + [f"{item['name']} · {item['source']} ({item['indicator']})" for item in candidates]
+    selected = st.selectbox("Potential indicators", options)
+    if selected != options[0] and st.button("Analyze this verified indicator", type="primary"):
+        candidate = candidates[options.index(selected)-1]
+        try:
+            with st.spinner("Downloading indicator history…"):
+                frame, provenance = load_discovered(candidate["indicator"], tuple(codes))
+            st.session_state["research_result"] = (candidate["name"], q, frame, provenance, span)
+            st.session_state.pop("research_candidates", None)
+            st.rerun()
+        except Exception as exc: st.error(f"Unable to retrieve this indicator: {exc}")
 if "research_result" not in st.session_state:
-    st.info("Research topics currently supported: population, GDP per capita, life expectancy, CO₂ emissions, and unemployment. More domains will be added through verified connectors.")
+    st.info("Ask any question to search our connected World Bank indicator catalog. Coverage is broader than the five curated topics, but not yet the entire internet.")
     st.stop()
 topic, question, frame, provenance, years = st.session_state["research_result"]
 last_year = int(frame["Year"].max())
