@@ -92,8 +92,14 @@ def show_report(question: str,mode: str,key: str):
         st.markdown(f"**What the data shows:** Between {int(first['Year'])} and {int(last['Year'])}, this indicator moved from **{first['Value']:,.1f}** to **{last['Value']:,.1f}** ({chart['unit']}). This is a descriptive trend, not proof of why it changed.")
         st.caption(chart["note"])
         st.markdown("[Explore the original World Bank data]("+chart["source"]+")")
+        for extra in charts[1:]:
+            with st.expander("📊 Additional verified metric: "+extra["title"],expanded=True):
+                more=pd.DataFrame(extra["rows"])
+                st.plotly_chart(px.line(more,x="Year",y="Value",markers=True,title=extra["title"],labels={"Value":extra["unit"]}),use_container_width=True)
+                st.caption(extra["note"])
+                st.markdown("[Source data]("+extra["source"]+")")
     else:
-        st.info("No verified numerical series matched this question. A chart is not shown rather than inventing numbers.")
+        st.info("No matching verified numerical series was available. A chart is not shown rather than inventing numbers.")
     st.markdown("### 02 / Evidence and the story")
     if findings:
         for index,finding in enumerate(narrative(question,report)):
