@@ -20,13 +20,13 @@ def get_story_charts(question):
     return indicators_for(question)
 
 def show_report(question: str,mode: str,key: str):
-    ai_mode=st.radio("Research mode",["Free — source evidence","Open model — Ollama (self-hosted)","Automatic — use OpenAI when available"],horizontal=True,key=key+"_mode",help="Free mode uses Tavily search and source excerpts without calling OpenAI. Automatic mode uses OpenAI when available and falls back to excerpts if quota is exhausted.")
+    ai_mode=st.radio("Research mode",["Hugging Face — open-source AI","Free — source evidence","Open model — Ollama (self-hosted)","Automatic — use OpenAI when available"],horizontal=True,key=key+"_mode",help="Hugging Face uses an open-weight hosted model with HF_TOKEN and limited inference credits. Free mode is evidence-only. Ollama requires your own server. OpenAI requires separate API credits.")
     if st.button("🔎 Investigate my question",type="primary",key=key):
         if not question.strip():st.warning("Enter a question first.")
         else:
             try:
                 with st.spinner("Discovering sources, reading evidence and preparing your answer…"):
-                    st.session_state[key+"_report"]=(question,run_investigation(question,mode,"free" if ai_mode.startswith("Free") else ("local" if ai_mode.startswith("Open model") else "auto")))
+                    st.session_state[key+"_report"]=(question,run_investigation(question,mode,"huggingface" if ai_mode.startswith("Hugging Face") else ("free" if ai_mode.startswith("Free") else ("local" if ai_mode.startswith("Open model") else "auto"))))
             except Exception as exc:
                 import logging
                 logging.exception("InsightFlow investigation failed")
