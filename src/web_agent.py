@@ -105,7 +105,19 @@ def investigate(question: str,mode: str="research", ai_mode: str="auto") -> dict
         result["leads"]=leads
         return result
     key=_secret("OPENAI_API_KEY")
-    provider=ai_mode.lower() if ai_mode in ("free","auto","openai") else "auto"
+    provider=ai_mode.lower() if ai_mode in ("free","auto","openai","local") else "auto"
+    if provider=="local":
+        try:
+            from src.open_model import generate
+            story=generate(question,evidence,mode)
+            if story:
+                story["intent"]=intent
+                story["leads"]=leads
+                return story
+        except Exception as exc:
+            import logging
+            logging.warning("Open model synthesis unavailable: %s",type(exc).__name__)
+        provider="free"
     if provider=="free":key=""
     if not key:
         result=_fallback(question,intent,evidence)
