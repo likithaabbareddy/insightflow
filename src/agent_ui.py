@@ -20,13 +20,13 @@ def get_story_charts(question):
     return indicators_for(question)
 
 def show_report(question: str,mode: str,key: str):
-    ai_mode=st.radio("Research mode",["Free — source evidence","Automatic — use OpenAI when available"],horizontal=True,key=key+"_mode",help="Free mode uses Tavily search and source excerpts without calling OpenAI. Automatic mode uses OpenAI when available and falls back to excerpts if quota is exhausted.")
+    ai_mode=st.radio("Research mode",["Free — source evidence","Open model — Ollama (self-hosted)","Automatic — use OpenAI when available"],horizontal=True,key=key+"_mode",help="Free mode uses Tavily search and source excerpts without calling OpenAI. Automatic mode uses OpenAI when available and falls back to excerpts if quota is exhausted.")
     if st.button("🔎 Investigate my question",type="primary",key=key):
         if not question.strip():st.warning("Enter a question first.")
         else:
             try:
                 with st.spinner("Discovering sources, reading evidence and preparing your answer…"):
-                    st.session_state[key+"_report"]=(question,run_investigation(question,mode,"free" if ai_mode.startswith("Free") else "auto"))
+                    st.session_state[key+"_report"]=(question,run_investigation(question,mode,"free" if ai_mode.startswith("Free") else ("local" if ai_mode.startswith("Open model") else "auto")))
             except Exception as exc:
                 import logging
                 logging.exception("InsightFlow investigation failed")
