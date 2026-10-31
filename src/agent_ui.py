@@ -2,7 +2,7 @@
 import streamlit as st
 from src.web_agent import investigate
 from src.service_health import show_health
-from src.free_analysis import public_indicator
+from src.story_engine import indicators_for, photographs, narrative
 import pandas as pd
 import plotly.express as px
 from src.exports import pdf_bytes,docx_bytes,pptx_bytes
@@ -10,6 +10,14 @@ from src.exports import pdf_bytes,docx_bytes,pptx_bytes
 @st.cache_data(ttl=3600,show_spinner=False)
 def run_investigation(question,mode,ai_mode):
     return investigate(question,mode,ai_mode)
+
+@st.cache_data(ttl=86400,show_spinner=False)
+def get_story_media(question):
+    return photographs(question)
+
+@st.cache_data(ttl=86400,show_spinner=False)
+def get_story_charts(question):
+    return indicators_for(question)
 
 def show_report(question: str,mode: str,key: str):
     ai_mode=st.radio("Research mode",["Free — source evidence","Automatic — use OpenAI when available"],horizontal=True,key=key+"_mode",help="Free mode uses Tavily search and source excerpts without calling OpenAI. Automatic mode uses OpenAI when available and falls back to excerpts if quota is exhausted.")
@@ -51,8 +59,18 @@ def show_report(question: str,mode: str,key: str):
     st.markdown(f'<div class="story-hero"><div class="story-kicker">INSIGHTFLOW / RESEARCH BRIEFING</div><h2>{title}</h2><p>{summary}</p></div>',unsafe_allow_html=True)
     findings=report.get("findings",[])
     st.caption(f"Evidence-led presentation · {len(findings)} sourced highlights · charts shown only when verified data is available")
-    chart=public_indicator(question)
-    if chart:
+    photos=get_story_media(question)
+    if photos:
+        st.markdown("### Visual introduction")
+        columns=st.columns(len(photos))
+        for column,photo in zip(columns,photos):
+            with column:
+                st.image(photo["url"],use_container_width=True)
+                st.caption(photo["title"][:85]+" · "+photo["license"])
+                st.markdown("[Photo credit and license]("+photo["page"]+")")
+    charts=get_story_charts(question)
+    if charts:
+        chart=charts[0]
         df=pd.DataFrame(chart["rows"]).sort_values("Year")
         first,last=df.iloc[0],df.iloc[-1]
         delta=last["Value"]-first["Value"]
@@ -78,13 +96,13 @@ def show_report(question: str,mode: str,key: str):
         st.info("No verified numerical series matched this question. A chart is not shown rather than inventing numbers.")
     st.markdown("### 02 / Evidence and the story")
     if findings:
-        for index,finding in enumerate(findings):
+        for index,finding in enumerate(narrative(question,report)):
             with st.container(border=True):
                 col1,col2=st.columns([1,5])
                 col1.markdown(f"## {index+1:02d}")
                 with col2:
-                    st.markdown("#### "+finding["heading"])
-                    st.write(finding["text"])
+                    st.markdown("#### "+finding["title"])
+                    st.write(finding["body"])
                     st.markdown("**Verify:** "+", ".join(f"[Source {i+1}]({url})" for i,url in enumerate(finding.get("sources") or [finding["source"]])))
     else:
         st.warning("No question-specific statements were supported by retrieved sources.")
