@@ -105,7 +105,22 @@ def investigate(question: str,mode: str="research", ai_mode: str="auto") -> dict
         result["leads"]=leads
         return result
     key=_secret("OPENAI_API_KEY")
-    provider=ai_mode.lower() if ai_mode in ("free","auto","openai","local") else "auto"
+    provider=ai_mode.lower() if ai_mode in ("free","auto","openai","local","huggingface") else "auto"
+    if provider=="huggingface":
+        try:
+            from src.huggingface_model import generate as hf_generate
+            story=hf_generate(question,evidence,mode)
+            story["intent"]=intent
+            story["leads"]=leads
+            story["model_provider"]="Hugging Face"
+            return story
+        except Exception as exc:
+            import logging
+            logging.warning("Hugging Face synthesis unavailable: %s",type(exc).__name__)
+            result=_fallback(question,intent,evidence)
+            result["summary"]="Hugging Face AI unavailable ("+type(exc).__name__+"). Showing source evidence instead. Check HF_TOKEN, HF_MODEL, model availability and inference credits."
+            result["leads"]=leads
+            return result
     if provider=="local":
         try:
             from src.open_model import generate
