@@ -57,10 +57,11 @@ def show_report(question: str,mode: str,key: str):
     title=html.escape(report["title"])
     summary=html.escape(report["summary"])
     st.markdown(f'<div class="story-hero"><div class="story-kicker">INSIGHTFLOW / RESEARCH BRIEFING</div><h2>{title}</h2><p>{summary}</p></div>',unsafe_allow_html=True)
+    layout=st.segmented_control("Presentation layout",["Editorial","Gallery","Executive"],default="Editorial",key=key+"_layout")
     findings=report.get("findings",[])
     st.caption(f"Evidence-led presentation · {len(findings)} sourced highlights · charts shown only when verified data is available")
     photos=get_story_media(question)
-    if photos:
+    if photos and layout!="Executive":
         st.markdown("### Visual introduction")
         columns=st.columns(len(photos))
         for column,photo in zip(columns,photos):
@@ -100,6 +101,30 @@ def show_report(question: str,mode: str,key: str):
                 st.markdown("[Source data]("+extra["source"]+")")
     else:
         st.info("No matching verified numerical series was available. A chart is not shown rather than inventing numbers.")
+    st.markdown("### Your data / automatic visualization")
+    with st.expander("📁 Add a CSV or Excel dataset for question-specific charts"):
+        uploaded=st.file_uploader("Research data",type=["csv","xlsx"],key=key+"_data")
+        if uploaded:
+            try:
+                data=pd.read_csv(uploaded) if uploaded.name.lower().endswith(".csv") else pd.read_excel(uploaded)
+                numeric=data.select_dtypes(include="number").columns.tolist()
+                dimensions=[col for col in data.columns if col not in numeric]
+                if not numeric:
+                    st.info("No numeric columns found for charting.")
+                else:
+                    value=st.selectbox("Measure",numeric,key=key+"_measure")
+                    category=st.selectbox("Dimension",dimensions or [col for col in data.columns if col!=value],key=key+"_dimension")
+                    kind=st.selectbox("Chart",["Bar","Line","Scatter","Histogram"],key=key+"_chart")
+                    frame=data[[category,value]].dropna().head(5000)
+                    if kind=="Histogram":fig=px.histogram(data,x=value,title=value+" distribution")
+                    elif kind=="Scatter":fig=px.scatter(frame,x=category,y=value,title=value+" vs "+category)
+                    else:
+                        grouped=frame.groupby(category,as_index=False)[value].sum().head(80)
+                        fig=px.line(grouped,x=category,y=value,markers=True) if kind=="Line" else px.bar(grouped,x=category,y=value)
+                    st.plotly_chart(fig,use_container_width=True)
+                    st.caption("Chart based on uploaded data. Grouped bars and lines sum numeric values; verify the aggregation suits your data.")
+            except (ValueError,KeyError,TypeError) as exc:
+                st.warning("Unable to chart this dataset. Check column types and file format.")
     st.markdown("### 02 / Evidence and the story")
     if findings:
         for index,finding in enumerate(narrative(question,report)):
